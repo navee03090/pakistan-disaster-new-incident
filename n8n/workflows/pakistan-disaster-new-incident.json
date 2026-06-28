@@ -1,0 +1,222 @@
+{
+  "name": "Pakistan Disaster - New Incident",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pakistan-disaster-new-incident",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "f8a1b2c3-4d5e-6f70-8192-a3b4c5d6e7f8",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "f8a1b2c3-4d5e-6f70-8192-a3b4c5d6e7f8"
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 3,
+        "unit": "seconds"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1111111111",
+      "name": "Wait 3 seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://pakistan-disaster-new-incident.vercel.app/api/process-incident",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_WITH_PROCESS_INCIDENT_SECRET"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"incidentId\": \"{{ $('Webhook').item.json.record?.id || $('Webhook').item.json.body?.record?.id }}\"\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f22222222222",
+      "name": "Process Incident AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-333333333333",
+      "name": "AI Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://pakistan-disaster-new-incident.vercel.app/api/notifications/send-emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_WITH_PROCESS_INCIDENT_SECRET"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"incidentId\": \"{{ $('Webhook').item.json.record?.id || $('Webhook').item.json.body?.record?.id }}\"\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "d4e5f6a7-b8c9-0123-defa-444444444444",
+      "name": "Send Emails",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "content": "## Setup after import\n\n1. Replace `REPLACE_WITH_PROCESS_INCIDENT_SECRET` in both HTTP nodes with your real secret (same as Vercel `PROCESS_INCIDENT_SECRET`).\n\n2. Supabase webhook URL:\n`https://naveedcr308.app.n8n.cloud/webhook/pakistan-disaster-new-incident`\n\n3. Activate this workflow.\n\n4. Test at: https://pakistan-disaster-new-incident.vercel.app/report",
+        "height": 220,
+        "width": 380
+      },
+      "id": "e5f6a7b8-c9d0-1234-efab-555555555555",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-40, 80]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "err-msg",
+              "name": "error",
+              "value": "={{ $json.error || $json.message || 'AI processing failed' }}",
+              "type": "string"
+            },
+            {
+              "id": "err-incident",
+              "name": "incidentId",
+              "value": "={{ $('Webhook').item.json.record?.id || $('Webhook').item.json.body?.record?.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f6a7b8c9-d0e1-2345-fabc-666666666666",
+      "name": "Log Failure",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 420]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3 seconds": {
+      "main": [
+        [
+          {
+            "node": "Process Incident AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Incident AI": {
+      "main": [
+        [
+          {
+            "node": "AI Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Success?": {
+      "main": [
+        [
+          {
+            "node": "Send Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

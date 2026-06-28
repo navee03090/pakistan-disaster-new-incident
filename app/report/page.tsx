@@ -7,8 +7,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { AlertTriangle, ArrowLeft, Upload, MapPin, Phone, Mail, X } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { uploadIncidentPhotos, validatePhotoFile } from '@/lib/supabase/storage'
+import { validatePhotoFile } from '@/lib/supabase/storage'
 import type { LocationValue } from '@/components/report/location-map-picker'
 
 const LocationMapPicker = dynamic(
@@ -76,43 +75,53 @@ export default function EmergencyReportPage() {
     setSubmitting(true)
     setError(null)
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    try {
+      const payload = new FormData()
+      payload.append('firstName', formData.firstName)
+      payload.append('lastName', formData.lastName)
+      payload.append('phone', formData.phone)
+      payload.append('email', formData.email)
+      payload.append('emergencyType', formData.emergencyType)
+      payload.append('severity', formData.severity)
+      payload.append('description', formData.description)
+      payload.append('latitude', formData.latitude)
+      payload.append('longitude', formData.longitude)
+      payload.append('locationName', formData.locationName)
+      payload.append('affectedPeople', formData.affectedPeople || '0')
+      payload.append('injuries', formData.injuries || '0')
+      for (const photo of formData.photos) {
+        payload.append('photos', photo)
+      }
 
-    const { data, error: insertError } = await supabase.from('incidents').insert({
-      first_name: formData.firstName,
-      last_name: formData.lastName,
-      phone: formData.phone,
-      email: formData.email || null,
-      emergency_type: formData.emergencyType,
-      severity: formData.severity,
-      description: formData.description,
-      latitude: parseFloat(formData.latitude),
-      longitude: parseFloat(formData.longitude),
-      location_name: formData.locationName || null,
-      affected_people: formData.affectedPeople ? parseInt(formData.affectedPeople, 10) : 0,
-      injuries: formData.injuries ? parseInt(formData.injuries, 10) : 0,
-      reporter_id: user?.id ?? null,
-    }).select('id').single()
+      const response = await fetch('/api/report', {
+        method: 'POST',
+        body: payload,
+      })
 
-    if (insertError || !data) {
-      setSubmitting(false)
-      setError(insertError?.message ?? 'Failed to submit report')
-      return
-    }
+      const json = await response.json().catch(() => ({}))
 
-    if (formData.photos.length > 0) {
-      try {
-        await uploadIncidentPhotos(supabase, data.id, formData.photos)
-      } catch (photoError) {
+      if (!response.ok) {
         setSubmitting(false)
-        setError(photoError instanceof Error ? photoError.message : 'Photo upload failed')
+        setError(json.error ?? `Server error (${response.status}). Please try again.`)
         return
       }
-    }
 
-    setSubmitting(false)
-    router.push(`/processing/${data.id}`)
+      if (!json.id) {
+        setSubmitting(false)
+        setError('Report saved but no incident ID returned. Please contact support.')
+        return
+      }
+
+      setSubmitting(false)
+      router.push(`/processing/${json.id}`)
+    } catch (err) {
+      setSubmitting(false)
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Network error. Check your connection and try again.'
+      )
+    }
   }
 
   const emergencyTypes = [

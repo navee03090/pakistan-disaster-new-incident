@@ -61,7 +61,21 @@ Payload will include `record.id` (incident UUID).
 
 ## Step 3 — n8n Cloud Workflow 1: Process + Notify
 
-Create a new workflow in [n8n.cloud](https://n8n.cloud):
+**Import ready-made workflow:** `n8n/workflows/pakistan-disaster-new-incident.json`
+
+In n8n Cloud: **Workflow menu (⋯) → Import from File** → select that JSON file.
+
+After import:
+1. Open **Process Incident AI** and **Send Emails** nodes
+2. Replace `REPLACE_WITH_PROCESS_INCIDENT_SECRET` with your real secret (same as Vercel)
+3. **Activate** the workflow
+4. Use this Supabase webhook URL:
+
+```
+https://naveedcr308.app.n8n.cloud/webhook/pakistan-disaster-new-incident
+```
+
+Or create manually in [n8n.cloud](https://n8n.cloud):
 
 ### Node 1: Webhook (Trigger)
 
